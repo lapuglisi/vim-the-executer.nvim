@@ -17,9 +17,8 @@ M.default_options = {
 }
 
 ---@private
-local function current_text_into_argv()
+local function current_text_into_cmd()
 	local mode = vim.api.nvim_get_mode().mode
-	local argv = {}
 	local text = ""
 
 	if mode == "v" or mode == "V" or mode == "\22" then
@@ -33,39 +32,7 @@ local function current_text_into_argv()
 
 	text = text:gsub("[\r\n\t]+", "")
 
-	-- Proceed to actual split
-	local in_quote = false
-	local match = ""
-	for t in text:gmatch("%S+") do
-		local s = t:sub(1, 1)
-		local e = t:sub(-1)
-
-		if s == '"' or s == "'" then
-			if e == '"' or e == "'" then
-				-- no need to start in_quote
-				-- remove ""
-				t = t:gsub("[" .. e .. "]+", "")
-				table.insert(argv, t)
-			else
-				in_quote = true
-				match = match .. t .. " "
-			end
-		elseif e == '"' or e == "'" then
-			match = match .. t .. " "
-			if in_quote then
-				match = vim.fn.trim(match)
-				match = match:gsub("[" .. e .. "]+", "")
-
-				table.insert(argv, match)
-				match = ""
-				in_quote = false
-			end
-		else
-			table.insert(argv, t)
-		end
-	end
-
-	return argv
+	return vim.fn.trim(text)
 end
 
 local function setup_internals(opts)
@@ -128,21 +95,23 @@ end
 
 M.do_the_harlem_shake = function()
 	-- get current text (selection or current line)
-	local argv = current_text_into_argv()
+	local cmd = current_text_into_cmd()
 
 	local buf, win = create_executor_win()
 
 	-- Actual command execution
-	if #argv == 0 then
+	if cmd:len() == 0 then
 		vim.api.nvim_buf_set_lines(buf, 0, 0, false, { "Current text is empty." })
 		return
 	else
-		vim.api.nvim_buf_set_lines(buf, 0, 0, false, { "Executing command: " .. vim.inspect(argv), "" })
+		vim.api.nvim_buf_set_lines(buf, 0, 0, false, { "Executing command: " .. cmd, "" })
 	end
 
 	local buflinenr = (vim.fn.line("$", win) or 1) + 1
 	local out = ""
-	local ok, res = pcall(vim.system, argv, { text = true, timeout = 5000 })
+
+	-- local ok, res = pcall(vim.system, argv, { text = true, timeout = 5000 })
+	local ok, res = pcall(vim.system, { vim.o.shell }, { stdin = cmd, text = true, timeout = 5000 })
 
 	if ok then
 		local obj = res:wait()
