@@ -3,6 +3,7 @@ local M = {}
 M.options = {}
 
 M.default_options = {
+	verbose = false,
 	execute_key = "<F5>",
 	height_ratio = 0.8,
 	width_ratio = 0.8,
@@ -38,6 +39,7 @@ end
 local function setup_internals(opts)
 	opts.float_window = opts.float_window or M.default_options.float_window
 	M.options = {
+		verbose = opts.verbose or false,
 		execute_key = opts.execute_key or M.default_options.execute_key,
 		height_ratio = opts.height_ratio or M.default_options.height_ratio,
 		width_ratio = opts.width_ratio or M.default_options.width_ratio,
@@ -104,7 +106,9 @@ M.do_the_harlem_shake = function()
 		vim.api.nvim_buf_set_lines(buf, 0, 0, false, { "Current text is empty." })
 		return
 	else
-		vim.api.nvim_buf_set_lines(buf, 0, 0, false, { "Executing command: " .. cmd, "" })
+		if M.options.verbose then
+			vim.api.nvim_buf_set_lines(buf, 0, 0, false, { "Executing command: " .. cmd, "" })
+		end
 	end
 
 	local buflinenr = (vim.fn.line("$", win) or 1) + 1
